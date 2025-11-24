@@ -1,0 +1,7 @@
+[project]
+name = "arabic-diacritization"
+version = "0.1.0"
+description = "A system that takes an Arabic sentence and produces the same sentence after restoring the missing diacritics"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
