@@ -27,6 +27,7 @@ CHAR2ID = {char: id for id, char in enumerate(ARABIC_LETTERS)}
 CHAR2ID[" "] = len(ARABIC_LETTERS)
 CHAR2ID["<PAD>"] = len(ARABIC_LETTERS) + 1
 PAD = CHAR2ID["<PAD>"]
+SPACE = CHAR2ID[" "]
 ID2CHAR = {id: char for char, id in CHAR2ID.items()}
 
 DIACRITIC2ID = np.load('../data/utils/diacritic2id.pkl', allow_pickle=True)

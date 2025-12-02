@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import re
 from config import (
-    DEVICE, VALID_CHARS, PUNCTUATIONS, DIACRITICS,
+    VALID_CHARS, PUNCTUATIONS, DIACRITICS,
     PAD, CHAR2ID, DIACRITIC2ID
 )
 from typing import List
@@ -70,9 +70,9 @@ class ArabicDataset(Dataset):
 
         encoded_data_X, encoded_data_Y = self.encode_data(data_X, data_Y)
         data_X = torch.tensor(
-            encoded_data_X, dtype=torch.int64).to(DEVICE)
+            encoded_data_X, dtype=torch.int64)
         data_Y = torch.tensor(
-            encoded_data_Y, dtype=torch.int64).to(DEVICE)
+            encoded_data_Y, dtype=torch.int64)
 
         return data_X, data_Y
 

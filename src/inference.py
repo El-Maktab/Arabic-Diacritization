@@ -7,12 +7,14 @@ from models import ArabicModel
 import os
 import sys
 
+
 def predict(model, encoded_sentence):
     input_tensor = torch.tensor(
         [encoded_sentence], dtype=torch.int64).to(DEVICE)
     with torch.no_grad():
         outputs = model(input_tensor)
     return outputs.argmax(dim=-1).squeeze(0).cpu().numpy()
+
 
 def infer(model_path, input_path):
 
