@@ -4,11 +4,27 @@ import numpy as np
 import re
 from config import (
     VALID_CHARS, PUNCTUATIONS, DIACRITICS,
-    PAD, CHAR2ID, DIACRITIC2ID
+    PAD, CHAR2ID, DIACRITIC2ID, DATASET_REGISTRY
 )
 from typing import List
 
 
+def register_dataset(name):
+    def decorator(cls):
+        DATASET_REGISTRY[name] = cls
+        return cls
+    return decorator
+
+
+def generate_dataset(dataset_name: str, *args, **kwargs):
+    try:
+        dataset_cls = DATASET_REGISTRY[dataset_name]
+    except KeyError:
+        raise ValueError(f"Dataset '{dataset_name}' is not recognized.")
+    return dataset_cls(*args, **kwargs)
+
+
+@register_dataset("ArabicDataset")
 class ArabicDataset(Dataset):
     def __init__(self, file_path: str):
         self.data_X, self.data_Y = self.generate_tensor_data(file_path)
@@ -18,6 +34,18 @@ class ArabicDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.data_X[idx], self.data_Y[idx]
+
+    def generate_tensor_data(self, data_path: str):
+        data_Y = self.load_data(data_path)
+        data_X = self.extract_text_without_diacritics(data_Y)
+
+        encoded_data_X, encoded_data_Y = self.encode_data(data_X, data_Y)
+        data_X = torch.tensor(
+            encoded_data_X, dtype=torch.int64)
+        data_Y = torch.tensor(
+            encoded_data_Y, dtype=torch.int64)
+
+        return data_X, data_Y
 
     def load_data(self, file_path: str):
         data = []
@@ -63,18 +91,6 @@ class ArabicDataset(Dataset):
             padded_dataY[i, :len(seq)] = seq
 
         return padded_dataX, padded_dataY
-
-    def generate_tensor_data(self, data_path: str):
-        data_Y = self.load_data(data_path)
-        data_X = self.extract_text_without_diacritics(data_Y)
-
-        encoded_data_X, encoded_data_Y = self.encode_data(data_X, data_Y)
-        data_X = torch.tensor(
-            encoded_data_X, dtype=torch.int64)
-        data_Y = torch.tensor(
-            encoded_data_Y, dtype=torch.int64)
-
-        return data_X, data_Y
 
     def extract_diacritics(self, sentence: str):
         result = []

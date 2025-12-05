@@ -5,15 +5,16 @@ from config import (
     DEVICE, LEARNING_RATE, NUM_EPOCHS, BATCH_SIZE, HIDDEN_DIM, EMBEDDING_DIM,
     SRC_DIR, PAD, CHAR2ID, DIACRITIC2ID
 )
-from models import ArabicModel
-from dataset import ArabicDataset
+from models import generate_model
+from dataset import generate_dataset
 from torch.utils.data import DataLoader
 import os
+import sys
 
 
-def train(model: ArabicModel, train_dataset: ArabicDataset):
+def train(model: nn.Module, train_dataset: torch.utils.data.Dataset, model_name: str):
 
-    save_path = os.path.join(SRC_DIR, f"../models/{model.name()}.pth")
+    save_path = os.path.join(SRC_DIR, f"../models/{model_name}.pth")
 
     train_data_loader = DataLoader(
         train_dataset,
@@ -61,13 +62,28 @@ def train(model: ArabicModel, train_dataset: ArabicDataset):
 
 
 if __name__ == "__main__":
-    train_dataset = ArabicDataset(os.path.join(SRC_DIR, f"../data/train.txt"))
-    model = ArabicModel(
+
+    if len(sys.argv) != 2:
+        print("Usage: python train.py <model_name>")
+        sys.exit(1)
+
+    model_name = sys.argv[1]
+    if os.path.exists(os.path.join(SRC_DIR, f"../models/{model_name}.pth")):
+        print(f"A saved model with the name '{model_name}' exists.")
+        ans = input(
+            "Choose a new version name to avoid overwriting (v1, v2, ...): ")
+        ans = ans.strip()
+        model_name = f"{model_name}_{ans}"
+
+    model = generate_model(
+        model_name="LSTMArabicModel",
         vocab_size=len(CHAR2ID),
         embedding_dim=EMBEDDING_DIM,
         hidden_dim=HIDDEN_DIM,
         output_dim=len(DIACRITIC2ID),
         PAD=PAD
     )
+    train_dataset = generate_dataset(
+        "ArabicDataset", os.path.join(SRC_DIR, f"../data/train.txt"))
 
-    train(model, train_dataset)
+    train(model, train_dataset, model_name)

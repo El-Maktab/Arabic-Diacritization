@@ -1,17 +1,24 @@
 import torch
 import numpy as np
 import os
+from typing import Any
 
 # Configurations
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SRC_DIR = os.path.dirname(__file__)
 
+# Global registries
+DATASET_REGISTRY: dict[str, Any] = {}
+MODEL_REGISTRY: dict[str, Any] = {}
+
 # Model hyperparameters
 EMBEDDING_DIM = 128
 HIDDEN_DIM = 256
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 NUM_EPOCHS = 5
 LEARNING_RATE = 0.001
+NUM_LAYERS = 3
+DROPOUT = 0.2
 
 # Data parameters
 ARABIC_LETTERS = sorted(
