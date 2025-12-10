@@ -7,7 +7,6 @@ from config import (
     PAD,
     ARABIC_LETTERS,
     CHAR2ID,
-    ID2CHAR,
     DIACRITIC2ID,
     ID2DIACRITIC,
 )
