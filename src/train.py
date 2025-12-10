@@ -58,7 +58,7 @@ def train(model: nn.Module, train_dataset: torch.utils.data.Dataset, model_name:
             f'Epochs: {epoch + 1} | Train Loss: {epoch_loss} \
             | Train Accuracy: {epoch_acc}\n')
 
-    torch.save(model.state_dict(), save_path)
+        torch.save(model.state_dict(), save_path)
 
 
 if __name__ == "__main__":
