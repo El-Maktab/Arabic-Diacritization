@@ -187,17 +187,121 @@ Inference performed using Viterbi decoding.
 
 ## **4.1 Overview**
 
+Pipeline B implements the **D2 (Two-Level Diacritizer)** architecture from the paper _"Effective Deep Learning Models for Automatic Diacritization of Arabic Text"_. Unlike Pipeline A which processes text character-by-character, this architecture separates word-level and character-level processing.
+
+**Key insight / Intuition:** Diacritization requires both local morphological features (within-word patterns) and global syntactic context (cross-word dependencies like grammatical agreement).
+
 ---
 
 ## **4.2 Preprocessing Differences**
+
+### **Sliding Window Segmentation**
+
+- Sentences are split into overlapping segments of **Ts = 10 words** with **stride = 5** (Hyperparameter we experimented with)
+- Creates more training examples and handles variable-length sentences uniformly
+
+### **Word-Level Tokenization**
+
+- Text is tokenized at the word level (not just characters)
+- Words below **min_freq = 2** are mapped to `<UNK>`
+- Separate vocabulary built for words vs characters
+
+### **Character-Diacritic Separation**
+
+- Same as Pipeline A: each character paired with its diacritic(s)
+- Combined diacritics (e.g., shaddah + vowel) mapped to one of **15 classes**
 
 ---
 
 ## **4.3 Feature Extraction**
 
+### **Trainable Word Embeddings**
+
+- Dimension: **128**
+- Learned jointly during training
+- Captures distributional word semantics
+
+### **Trainable Character Embeddings**
+
+- Dimension: **32**
+- Captures morphological patterns within words
+
+### **Contextual Word Features (BiLSTM)**
+
+- Word embeddings processed by **2-layer Bidirectional LSTM**
+- Hidden dimension: **256** (×2 for bidirectional = 512)
+- Output: contextual word representations
+
+### **Contextual Character Features (BiLSTM)**
+
+- Character embeddings **concatenated with parent word context**:
+- Processed by **3-layer Bidirectional LSTM**
+- Hidden dimension: **512** (×2 = 1024)
+- Output: contextual character representations
+
+### **Cross-Level Attention Features**
+
+- Scaled dot-product attention over word encodings
+- For each character, attends to **all other words** (current word masked)
+- Captures long-range syntactic dependencies (e.g., case agreement from prepositions)
+
 ---
 
 ## **4.4 Model Architecture**
+
+### **Components**
+
+| Component    | Specification                                          |
+| ------------ | ------------------------------------------------------ |
+| Word Encoder | 2-layer BiLSTM, hidden=256, word_dropout=0.2           |
+| Char Encoder | 3-layer BiLSTM, hidden=512, input=[char_emb; word_ctx] |
+| Attention    | Scaled dot-product, Q=char, K/V=words, self-masked     |
+| Classifier   | Linear(1024 → 15 classes)                              |
+
+![./arch.png](arch.png)
+
+### **Training Hyperparameters**
+
+| Parameter      | Value                                      |
+| -------------- | ------------------------------------------ |
+| Batch size     | 128                                        |
+| Learning rate  | 0.002                                      |
+| Optimizer      | Adam                                       |
+| LR scheduler   | ReduceLROnPlateau (factor=0.5, patience=1) |
+| Dropout        | 0.25 (vertical), 0.2 (word/input)          |
+| Early stopping | 3 epochs patience                          |
+
+For all stages hyperparameters check the notebook config.
+
+### **Regularization Techniques**
+
+- **Sentence Dropout (0.2):** Randomly zeros word embeddings during training
+- **Vertical Dropout (0.25):** Between LSTM layers
+- **Input Dropout (0.2):** On character encoder inputs
+
+---
+
+## **4.5 D2 Experiments**
+
+| Exp # | Accuracy | CE Accuracy | Word LSTM Layers | Char LSTM Layers | Word Hidden | Char Hidden | Dropout | Word Dropout | Batch Size | LR    | Max Words | Stride | Notes           |
+| ----- | -------- | ----------- | ---------------- | ---------------- | ----------- | ----------- | ------- | ------------ | ---------- | ----- | --------- | ------ | --------------- |
+| 1     | 96.1     | 92.8        | 2                | 2                | 256         | 512         | 0.25    | 0.2          | 32         | 0.002 | 10        | 5      | Baseline config |
+| 2     | 95.0     | 93.0        | 2                | 2                | 256         | 512         | 0.25    | 0.0          | 32         | 0.002 | 10        | 5      | No word dropout |
+| 3     | 96.87    | 95.0        | 2                | 3                | 256         | 512         | 0.25    | 0.2          | 32         | 0.002 | 10        | 5      | +1 char layer   |
+| 4     | 81.0     | -           | 2                | 5                | 256         | 512         | 0.25    | 0.2          | 32         | 0.002 | 10        | 5      | Overfitted      |
+| 5     | 96.98    | 94.77       | 2                | 3                | 256         | 512         | 0.25    | 0.2          | 128        | 0.002 | 20        | 15     | Larger batch    |
+| 6     | 96.97    | 94.81       | 2                | 4                | 256         | 512         | 0.25    | 0.2          | 128        | 0.002 | 20        | 15     | +1 char layer   |
+| 7     | **97.2** | **95.37**   | 4                | 4                | 256         | 512         | 0.25    | 0.2          | 128        | 0.002 | 15        | 15     | **Best**        |
+
+### **Best D2 Model Results**
+
+| Metric                     | Value      |
+| -------------------------- | ---------- |
+| Overall Accuracy           | **97.20%** |
+| Case Ending Accuracy       | **95.37%** |
+| DER (Diacritic Error Rate) | **2.80%**  |
+
+**Best configuration:** 4-layer Word BiLSTM, 4-layer Char BiLSTM, batch=128, max_words=15 (with no overlap between segments)
 
 ---
 
@@ -214,6 +318,7 @@ Inference performed using Viterbi decoding.
 | CNN-CRF    | 85.17    |
 | BiLSTM-CRF | 95.75    |
 | HMM        | 45.81    |
+| D2 Model   | 95.37    |
 
 ---
 
@@ -226,6 +331,7 @@ Inference performed using Viterbi decoding.
 | CNN-CRF    | 83.67    |
 | BiLSTM-CRF | 97.80    |
 | HMM        | 61.41    |
+| D2 Model   | 97.20    |
 
 ## **6. Final Model Selection**
 
